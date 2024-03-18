@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "async-annoy"
+version = "0.1.0"
+description = "Asynchronous wrapper around the Annoy library for approximate nearest neighbor search."
+authors = ["Arthur Ryzhak <ryzhakar@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/ryzhakar/async-annoy"
+repository = "https://github.com/ryzhakar/async-annoy"
+keywords = ["annoy", "asynchronous", "nearest neighbors", "semantic search", "vector database", "search", "aiorwlock"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+annoy = "^1.17.3"
+aiorwlock = "^1.4.0"
+python-dotenv = "^1.0.1"
+numpy = "^1.26.4"
+
+[tool.poetry.group.dev.dependencies]
+wemake-python-styleguide = "^0.18.0"
+devtools = "^0.12.2"
+flake8 = "^7.0.0"
+pytest = "^8.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
