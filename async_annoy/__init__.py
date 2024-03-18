@@ -1,2 +1,1 @@
-from async_annoy.indexer import AnnoyReader
-from async_annoy.indexer import AnnoyWriter
+from async_annoy.indexer import AsyncAnnoy

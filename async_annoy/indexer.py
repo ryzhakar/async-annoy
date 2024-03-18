@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from collections import defaultdict
 
@@ -9,8 +11,12 @@ from numpy import ndarray
 from async_annoy import constants
 
 
-class AnnoyIndexManager:
-    """Manages read-write access to disk-based Annoy indices."""
+class AsyncAnnoy:
+    """Manages read-write access to disk-based Annoy indices.
+
+    Use .reader() to get a reader context manager, and .writer() to get
+    a writer context manager.
+    """
 
     lock_storage: dict[str, RWLock] = defaultdict(RWLock)
 
@@ -25,9 +31,17 @@ class AnnoyIndexManager:
         self.name = unique_name
         self.dimensions = dimensions
         self.metric = metric
-        self.ensure_directory_exists()
+        self._ensure_directory_exists()
         self.lock = self.lock_storage[self.path]
-        self.create_new_internal_instance()
+        self._create_new_internal_instance()
+
+    def reader(self) -> AnnoyReader:
+        """Get a reader context manager."""
+        return AnnoyReader(self)
+
+    def writer(self) -> AnnoyWriter:
+        """Get a writer context manager."""
+        return AnnoyWriter(self)
 
     @property
     def path(self) -> str:
@@ -37,18 +51,18 @@ class AnnoyIndexManager:
             f'{self.name}.ann',
         )
 
-    def create_new_internal_instance(self):
+    def _create_new_internal_instance(self):
         """Create a new Annoy index instance."""
         self.index = AnnoyIndex(self.dimensions, self.metric)
 
-    def load_if_exists(self) -> bool:
+    def _load_if_exists(self) -> bool:
         """Load the index memory-mapping from disk."""
         if os.path.exists(self.path):
             self.index.load(self.path)
             return True
         return False
 
-    def ensure_directory_exists(self) -> None:
+    def _ensure_directory_exists(self) -> None:
         """Ensure the directory for the index exists."""
         os.makedirs(constants.ASYNC_ANNOY_INDICES_DIRECTORY, exist_ok=True)
 
@@ -56,20 +70,10 @@ class AnnoyIndexManager:
 class AnnoyReader:
     """A context manager that allows read access to an Annoy index."""
 
-    def __init__(
-        self,
-        unique_name: str,
-        *,
-        dimensions: int = constants.ASYNC_ANNOY_DIMENSIONS,
-        metric: str = constants.ASYNC_ANNOY_METRIC,
-    ):
+    def __init__(self, manager: AsyncAnnoy):
         """Initialize the index manager."""
-        self.manager = AnnoyIndexManager(
-            unique_name,
-            dimensions=dimensions,
-            metric=metric,
-        )
-        if not self.manager.load_if_exists():
+        self.manager = manager
+        if not self.manager._load_if_exists():  # noqa: WPS437
             raise ValueError(
                 'Index %s does not exist.'
                 % self.manager.path,
@@ -104,19 +108,10 @@ class AnnoyReader:
 class AnnoyWriter:
     """A context manager that allows write access to an Annoy index."""
 
-    def __init__(
-        self,
-        unique_name: str,
-        *,
-        dimensions: int = constants.ASYNC_ANNOY_DIMENSIONS,
-        metric: str = constants.ASYNC_ANNOY_METRIC,
-    ):
+    def __init__(self, manager: AsyncAnnoy):
         """Initialize the index manager."""
-        self.manager = AnnoyIndexManager(
-            unique_name,
-            dimensions=dimensions,
-            metric=metric,
-        )
+        self.manager = manager
+        self.had_writes = False
 
     async def __aenter__(self):
         """Acquire a write lock."""
@@ -125,10 +120,12 @@ class AnnoyWriter:
 
     async def __aexit__(self, exc_type, exc, tb):
         """Build the index and release a write lock."""
-        self.manager.index.build(10)
-        self.manager.index.save(self.manager.path)
+        if self.had_writes:
+            self.manager.index.build(10)
+            self.manager.index.save(self.manager.path)
         self.manager.lock.writer_lock.release()
 
     async def add_item(self, index: int, vector: ndarray) -> None:
         """Add an item to the index."""
         self.manager.index.add_item(index, vector)
+        self.had_writes = True
