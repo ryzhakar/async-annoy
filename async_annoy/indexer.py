@@ -116,6 +116,7 @@ class AnnoyWriter:
     async def __aenter__(self):
         """Acquire a write lock."""
         await self.manager.lock.writer_lock.acquire()
+        self.manager._create_new_internal_instance()  # noqa: WPS437
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
