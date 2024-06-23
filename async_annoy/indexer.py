@@ -10,6 +10,8 @@ from numpy import ndarray
 
 from async_annoy import constants
 
+_DEFAULT_NEIGHBOURS = 3
+
 
 class AsyncAnnoy:
     """Manages read-write access to disk-based Annoy indices.
@@ -92,10 +94,27 @@ class AnnoyReader:
         self,
         *,
         vector: ndarray,
-        n: int = 3,  # noqa: WPS111
+        n: int = _DEFAULT_NEIGHBOURS,  # noqa: WPS111
     ) -> list[int]:
         """Get the indices of the n nearest neighbors to a vector."""
         return self.manager.index.get_nns_by_vector(vector, n)
+
+    async def get_ranked_neighbours_for(
+        self,
+        *,
+        vector: ndarray,
+        n: int = _DEFAULT_NEIGHBOURS,  # noqa: WPS111
+    ) -> list[tuple[int, float]]:
+        """Get n closest neighbors to a vector, sorted by distance."""
+        ids, distances = self.manager.index.get_nns_by_vector(
+            vector,
+            n,
+            include_distances=True,
+        )
+        return sorted(
+            zip(ids, distances),
+            key=lambda dist: dist[1],
+        )
 
     async def get_vector_by(self, index: int) -> ndarray:
         """Get the vector at a given index."""

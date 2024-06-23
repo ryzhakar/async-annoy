@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "async-annoy"
-version = "0.2.1"
+version = "0.3.0"
 description = "Asynchronous wrapper around the Annoy library for approximate nearest neighbor search."
 authors = ["Arthur Ryzhak <ryzhakar@gmail.com>"]
 license = "MIT"
